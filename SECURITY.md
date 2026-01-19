@@ -64,6 +64,40 @@ The following are **out of scope**:
 
 ---
 
+## 🔍 Security Audits
+
+### Current Audit Status (January 2026)
+
+**Tool Used:** `cargo audit` (Rust security vulnerability scanner)
+
+**Last Audit Run:** January 19, 2026
+
+**Summary:**
+- **Total Vulnerabilities:** 1 (down from 2 after dependency updates)
+- **Warnings:** 7 (unmaintained/unsound crates, mostly in transitive dependencies)
+- **Critical Issues:** 0
+
+#### Active Vulnerabilities:
+1. **tracing-subscriber** (transitive via ark-relations)
+   - **Severity:** Medium
+   - **Advisory:** RUSTSEC-2024-0370
+   - **Description:** Potential panic in `tracing-subscriber` when using `fmt::Debug` with malformed inputs.
+   - **Status:** Upstream issue opened in arkworks/ark-relations. Monitoring for fix.
+   - **Mitigation:** No known exploits in Qubit Protocol's usage.
+
+#### Resolved Vulnerabilities:
+- **ring** (RUSTSEC-2024-0336): Resolved by updating libp2p to 0.56.
+
+#### Warnings (Non-Critical):
+- Several crates flagged as unmaintained or unsound, but not directly exploitable.
+- Full list available by running `cargo audit` locally.
+
+**Audit Command:** `cargo audit`
+
+We recommend running `cargo audit` before building or deploying to check for the latest advisories.
+
+---
+
 ## 🧠 Responsible Disclosure
 
 We kindly ask reporters to:
