@@ -1,0 +1,8 @@
+# Bootstrap nodes for Qubit testnet
+# These are initial peers to connect to for network discovery
+# Format: /ip4/<ip>/tcp/<port>/p2p/<peer_id>
+
+bootnodes = [
+    "/ip4/127.0.0.1/tcp/6001/p2p/12D3KooWAbc123...",  # Example bootnode 1
+    "/ip4/127.0.0.1/tcp/6002/p2p/12D3KooWDef456...",  # Example bootnode 2
+]

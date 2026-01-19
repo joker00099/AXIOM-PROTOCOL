@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  node1:
+    build: .
+    container_name: qubit-node1
+    ports:
+      - "6001:6000"
+    volumes:
+      - node1-data:/app/data
+    entrypoint: ["./qubit"]
+    command: ["--bootnodes", "/ip4/172.20.0.2/tcp/6000/p2p/QmNode2,/ip4/172.20.0.3/tcp/6000/p2p/QmNode3"]
+    networks:
+      qubit-net:
+        ipv4_address: 172.20.0.1
+
+  node2:
+    build: .
+    container_name: qubit-node2
+    ports:
+      - "6002:6000"
+    volumes:
+      - node2-data:/app/data
+    entrypoint: ["./qubit"]
+    command: ["--bootnodes", "/ip4/172.20.0.1/tcp/6000/p2p/QmNode1,/ip4/172.20.0.3/tcp/6000/p2p/QmNode3"]
+    networks:
+      qubit-net:
+        ipv4_address: 172.20.0.2
+
+  node3:
+    build: .
+    container_name: qubit-node3
+    ports:
+      - "6003:6000"
+    volumes:
+      - node3-data:/app/data
+    entrypoint: ["./qubit"]
+    command: ["--bootnodes", "/ip4/172.20.0.1/tcp/6000/p2p/QmNode1,/ip4/172.20.0.2/tcp/6000/p2p/QmNode2"]
+    networks:
+      qubit-net:
+        ipv4_address: 172.20.0.3
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:
+
+networks:
+  qubit-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
