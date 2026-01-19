@@ -8,8 +8,8 @@ echo "⬇️  QUBIT PROTOCOL ZK KEY DOWNLOADER"
 echo "======================================"
 
 # Configuration - Update these with actual hashes after ceremony
-PROVING_KEY_IPFS="QmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Replace with actual IPFS hash after upload
-PROVING_KEY_SHA256=""  # (Intentionally left blank for privacy/anonymity)
+PROVING_KEY_IPFS="bafkreigjmiu2vtn7iehy6btmah7pfyxxknpddij4m3pyaq4occukv2qov4"  # Canonical IPFS CID
+PROVING_KEY_SHA256="c96229aacdbf410f8f066c01fef2e2f7535e31a13c66df80438e10a8aaea0eaf"  # Canonical artifact hash
 VERIFICATION_KEY_URL="https://raw.githubusercontent.com/Ghost-84M/Qubit-Protocol-84m/main/zk-setup/verification_key.json"
 
 # Create keys directory

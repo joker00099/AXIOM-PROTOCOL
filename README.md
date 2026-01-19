@@ -74,8 +74,8 @@ Qubit Protocol is a **fully tested and production-ready** next-generation blockc
 ### Dependency Updates
 - **libp2p**: Upgraded from 0.53 to 0.56 for improved networking and security
 - **ark-* crates**: Updated to 0.5.x for latest ZK-SNARK implementations
-- **Cargo Audit**: Resolved 1/2 vulnerabilities (ring RUSTSEC-2024-0336 fixed)
-- **Remaining Issue**: 1 medium vulnerability in tracing-subscriber (monitoring upstream)
+- **AI/ML**: Migrated from TensorFlow to ONNX Runtime for attack detection (see ONNX_USAGE.md)
+- **Cargo Audit**: All vulnerabilities resolved, clean build
 
 ### Infrastructure Improvements
 - **Docker Support**: Added Dockerfile and docker-compose.yml for containerized deployment
@@ -103,9 +103,10 @@ Qubit Protocol is a **fully tested and production-ready** next-generation blockc
 - **Network Synchronization**: P2P block and transaction propagation
 
 ### 🤖 AI Network Protection
-- **Neural Guardian**: Local AI agent on every node
+- **Neural Guardian**: Local AI agent on every node (ONNX Runtime powered)
 - **Attack Detection**: Identifies selfish mining, Sybil attacks, eclipse attacks
 - **Peer Trust Scoring**: Dynamic reputation system for network peers
+- **ONNX Inference**: Fast, portable, production-grade AI scoring
 - **Anomaly Isolation**: Automatic quarantine of suspicious nodes
 
 ### 💰 Economics
@@ -229,6 +230,25 @@ cargo run --release --bin qubit-supply
 ```
 
 ## 📖 Usage
+
+### Block Explorer API
+
+The explorer exposes REST endpoints for block and state queries:
+
+- **All blocks:**  
+    `GET http://127.0.0.1:8080/blocks`
+- **Chain state:**  
+    `GET http://127.0.0.1:8080/state`
+
+To run the explorer:
+
+```bash
+cd explorer
+cargo run --release
+# Or use VS Code port forwarding to access from your browser
+```
+
+You can use curl, Postman, or a browser to view the blockchain data.
 
 ### Node Operation
 ```bash
@@ -635,6 +655,8 @@ included in all copies or substantial portions of the Software.
 ```
 
 ## 🌐 Links & Resources
+- **Documentation**: [docs/](docs/) (generated with `cargo doc`)
+- **ONNX Usage**: [ONNX_USAGE.md](ONNX_USAGE.md)
 
 - **GitHub Repository**: [https://github.com/Ghost-84M/Qubit-Protocol-84m](https://github.com/Ghost-84M/Qubit-Protocol-84m)
 - **Documentation**: [docs/](docs/) (generated with `cargo doc`)
@@ -673,4 +695,17 @@ This software is not an experimental and provided "as is" without warranty of an
 *Built with ❤️ in Rust for the decentralized future.*
 
 > **Binary Signature**: `01010011 01100001 01110100 01101111 01110011 01101000 01101001` 🔐
+
+---
+
+## 🔑 Canonical ZK-SNARK Proving Key
+
+**This proving key is the canonical trusted setup artifact for the current circuit.**
+
+- **File:** proving_key.bin
+- **IPFS CID (v1, sha2-256):** `bafkreigjmiu2vtn7iehy6btmah7pfyxxknpddij4m3pyaq4occukv2qov4`
+- **SHA256:** `c96229aacdbf410f8f066c01fef2e2f7535e31a13c66df80438e10a8aaea0eaf`
+- **IPFS Gateway URL:** [https://bafkreigjmiu2vtn7iehy6btmah7pfyxxknpddij4m3pyaq4occukv2qov4.ipfs.w3s.link/](https://bafkreigjmiu2vtn7iehy6btmah7pfyxxknpddij4m3pyaq4occukv2qov4.ipfs.w3s.link/)
+
+---
 
