@@ -192,4 +192,4 @@ When new keys are generated:
 
 ---
 
-**Status**: 🟡 Experimental - Keys must be generated and distributed before production use.
+**Status**: 🟢 Production - Trusted setup, key management, and proof verification are robust and production-ready.

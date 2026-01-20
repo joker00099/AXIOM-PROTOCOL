@@ -44,6 +44,7 @@ ark-std = "0.5"
 # Storage
 sled = "0.34" # Embedded database for self-healing chain storage
 chrono = "0.4"
+log = "0.4.29"
 
 [profile.release]
 opt-level = 3            # Maximum speed for VDF loops

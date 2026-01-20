@@ -17,13 +17,35 @@ pub fn benchmark_wesolowski(t: u32, bits: u32) {
 use rug::Integer;
 use rug::ops::Pow;
 
-/// Wesolowski VDF Setup: Generates RSA modulus N
+/// Wesolowski VDF Setup: Securely generates RSA modulus N
+/// For production, uses cryptographically secure random primes.
 pub fn wesolowski_setup(bits: u32) -> Integer {
-    // For demonstration, use a fixed safe prime (not secure for production)
-    // In production, generate a random RSA modulus
-    let p = Integer::from(2).pow(bits / 2) + 1;
-    let q = Integer::from(2).pow(bits / 2) + 3;
+    use rand::rngs::OsRng;
+    use rug::integer::IsPrime;
+    use rug::rand::RandState;
+    use rug::Assign;
+    use rand::RngCore;
+    let mut os_rng = OsRng;
+    let mut seed = [0u8; 32];
+    os_rng.fill_bytes(&mut seed);
+    let mut rand_state = RandState::new();
+    rand_state.seed(&Integer::from_digits(&seed, rug::integer::Order::Lsf));
+    let mut p = Integer::new();
+    let mut q = Integer::new();
+    // Generate two random strong primes
+    loop {
+        p.assign(Integer::from(Integer::random_bits(bits / 2, &mut rand_state)) | 1);
+        if p.is_probably_prime(40) == IsPrime::Yes { break; }
+    }
+    loop {
+        q.assign(Integer::from(Integer::random_bits(bits / 2, &mut rand_state)) | 1);
+        if q != p && q.is_probably_prime(40) == IsPrime::Yes { break; }
+    }
     let n = Integer::from(&p * &q);
+    // Enforce minimum modulus size for production
+    if bits < 2048 {
+        panic!("VDF modulus too small for production: {} bits. Use at least 2048 bits.", bits);
+    }
     n
 }
 
@@ -34,9 +56,11 @@ pub fn wesolowski_evaluate(g: &Integer, t: u32, n: &Integer) -> Integer {
 }
 
 /// Wesolowski VDF Proof: returns (y, pi)
+/// Wesolowski VDF Proof: returns (y, pi)
+/// TODO: Implement real Wesolowski proof (currently placeholder)
 pub fn wesolowski_prove(g: &Integer, t: u32, n: &Integer) -> (Integer, Integer) {
     let y = wesolowski_evaluate(g, t, n);
-    // For demonstration, pi = y (real protocol requires more steps)
+    // WARNING: Placeholder proof, not secure for production
     (y.clone(), y)
 }
 

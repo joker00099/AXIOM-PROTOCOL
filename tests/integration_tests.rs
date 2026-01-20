@@ -44,6 +44,9 @@ mod tests {
         // Test valid transaction
         let result = tx.validate(balance);
         println!("Validation result: {:?}", result);
+        if let Err(e) = &result {
+            println!("[TEST DEBUG] Validation error: {}", e);
+        }
         assert!(result.is_ok());
 
         // Test insufficient balance

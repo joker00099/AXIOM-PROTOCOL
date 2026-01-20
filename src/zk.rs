@@ -1,3 +1,4 @@
+use std::io::Write;
 use ark_groth16::{Groth16, ProvingKey, VerifyingKey};
 use ark_bls12_381::{Bls12_381, Fr};
 use crate::circuit::QubitTransactionCircuit;
@@ -36,6 +37,26 @@ pub fn load_zk_keys() -> Result<(), Box<dyn std::error::Error>> {
         download_zk_keys()?;
     }
 
+    // Enforce secure file permissions (proving key should be readable only by the user)
+    #[cfg(unix)] {
+        use std::os::unix::fs::PermissionsExt;
+        if pk_path.exists() {
+            let mut perms = fs::metadata(&pk_path)?.permissions();
+            perms.set_mode(0o600);
+            fs::set_permissions(&pk_path, perms)?;
+        }
+        if vk_path.exists() {
+            let mut perms = fs::metadata(&vk_path)?.permissions();
+            perms.set_mode(0o644);
+            fs::set_permissions(&vk_path, perms)?;
+        }
+    }
+
+    // Prevent accidental key overwrite or reuse
+    if PROVING_KEY.get().is_some() || VERIFYING_KEY.get().is_some() {
+        return Err("ZK keys already loaded; refusing to overwrite in production".into());
+    }
+
     // Load proving key
     let pk_file = fs::File::open(&pk_path)?;
     let proving_key = ProvingKey::deserialize_compressed(pk_file)?;
@@ -52,6 +73,7 @@ pub fn load_zk_keys() -> Result<(), Box<dyn std::error::Error>> {
     VERIFYING_KEY.set(verifying_key).map_err(|_| "Failed to set verification key")?;
 
     println!("✅ ZK keys loaded successfully");
+    println!("⚠️  SECURITY: Proving key is sensitive. Ensure file permissions are 600 and never commit to version control.");
     Ok(())
 }
 
@@ -85,6 +107,8 @@ pub fn generate_transaction_proof(
     transfer_amount: u64,
     fee: u64,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    println!("[ZK DEBUG] Entered generate_transaction_proof");
+    std::io::stdout().flush().unwrap();
     load_zk_keys()?;
 
     let pk = PROVING_KEY.get().ok_or("Proving key not loaded")?;
@@ -100,6 +124,14 @@ pub fn generate_transaction_proof(
     hasher.update(secret_key);
     let address_bytes = hasher.finalize();
     let address_fr = Fr::from_le_bytes_mod_order(&address_bytes);
+
+    println!("[ZK DEBUG] Proof Generation:");
+    println!("  secret_fr:    {:?}", secret_fr);
+    println!("  balance_fr:   {:?}", balance_fr);
+    println!("  amount_fr:    {:?}", amount_fr);
+    println!("  fee_fr:       {:?}", fee_fr);
+    println!("  address_fr:   {:?}", address_fr);
+    std::io::stdout().flush().unwrap();
 
     // Create circuit instance
     let circuit = QubitTransactionCircuit {
@@ -118,6 +150,9 @@ pub fn generate_transaction_proof(
     let mut proof_bytes = Vec::new();
     proof.serialize_compressed(&mut proof_bytes)?;
 
+    println!("[ZK DEBUG] Proof generated successfully");
+    std::io::stdout().flush().unwrap();
+
     Ok(proof_bytes)
 }
 
@@ -128,24 +163,57 @@ pub fn verify_transaction_proof(
     transfer_amount: u64,
     fee: u64,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    load_zk_keys()?;
+    println!("[ZK DEBUG] Entered verify_transaction_proof");
+    std::io::stdout().flush().unwrap();
 
-    let vk = VERIFYING_KEY.get().ok_or("Verification key not loaded")?;
+    // Key loading
+    let vk = match VERIFYING_KEY.get() {
+        Some(vk) => vk,
+        None => {
+            println!("[ZK DEBUG] Verification key not loaded");
+            return Err("Verification key not loaded".into());
+        }
+    };
+    println!("[ZK DEBUG] Verification key loaded");
+    std::io::stdout().flush().unwrap();
 
-    // Deserialize proof
-    let proof = ark_groth16::Proof::deserialize_compressed(&proof_bytes[..])?;
+    // Proof deserialization
+    let proof = match ark_groth16::Proof::deserialize_compressed(&proof_bytes[..]) {
+        Ok(p) => p,
+        Err(e) => {
+            println!("[ZK DEBUG] Proof deserialization error: {}", e);
+            std::io::stdout().flush().unwrap();
+            return Err(Box::new(e));
+        }
+    };
+    println!("[ZK DEBUG] Proof deserialized");
+    std::io::stdout().flush().unwrap();
 
     // Prepare public inputs
     let address_fr = Fr::from_le_bytes_mod_order(public_address);
     let amount_fr = Fr::from(transfer_amount);
     let fee_fr = Fr::from(fee);
 
+    println!("[ZK DEBUG] Proof Verification:");
+    println!("  address_fr:   {:?}", address_fr);
+    println!("  amount_fr:    {:?}", amount_fr);
+    println!("  fee_fr:       {:?}", fee_fr);
+    std::io::stdout().flush().unwrap();
+
     let public_inputs = vec![address_fr, amount_fr, fee_fr];
 
-    // Verify proof
-    let valid = Groth16::<Bls12_381>::verify(vk, &public_inputs, &proof)?;
-
-    Ok(valid)
+    match Groth16::<Bls12_381>::verify(vk, &public_inputs, &proof) {
+        Ok(v) => {
+            println!("[ZK DEBUG] Proof verification result: {}", v);
+            std::io::stdout().flush().unwrap();
+            Ok(v)
+        },
+        Err(e) => {
+            println!("[ZK DEBUG] Proof verification error: {}", e);
+            std::io::stdout().flush().unwrap();
+            Err(Box::new(e))
+        }
+    }
 }
 
 /// Generate ZK proof for mining (simplified for performance)

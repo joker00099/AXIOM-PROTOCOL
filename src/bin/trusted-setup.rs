@@ -31,16 +31,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("⚙️  Generating proving key (this may take a while)...");
     let (proving_key, verification_key) = Groth16::<Bls12_381>::setup(circuit, &mut rng)?;
 
+
     // Serialize and save the proving key
     println!("💾 Saving proving key...");
     let pk_path = Path::new("keys/proving_key.bin");
-    let mut pk_file = fs::File::create(pk_path)?;
+    if pk_path.exists() {
+        return Err("Refusing to overwrite existing proving key in production".into());
+    }
+    let mut pk_file = fs::OpenOptions::new().write(true).create_new(true).open(pk_path)?;
     let proving_key: ProvingKey<Bls12_381> = proving_key;
     proving_key.serialize_compressed(&mut pk_file)?;
+    // Enforce secure permissions
+    #[cfg(unix)] {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(pk_path)?.permissions();
+        perms.set_mode(0o600);
+        fs::set_permissions(pk_path, perms)?;
+    }
 
     // Serialize and save the verification key as JSON for easier handling
     println!("💾 Saving verification key...");
     let vk_path = Path::new("keys/verification_key.json");
+    if vk_path.exists() {
+        return Err("Refusing to overwrite existing verification key in production".into());
+    }
 
     // Convert verification key to a serializable format
     let prepared_vk = prepare_verifying_key(&verification_key);
@@ -61,6 +75,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     fs::write(vk_path, serde_json::to_string_pretty(&vk_json)?)?;
+    #[cfg(unix)] {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(vk_path)?.permissions();
+        perms.set_mode(0o644);
+        fs::set_permissions(vk_path, perms)?;
+    }
 
     // Get file sizes for logging
     let pk_size = fs::metadata(pk_path)?.len();

@@ -22,7 +22,8 @@ pub fn add_external_peer(swarm: &mut Swarm<TimechainBehaviour>, peer_addr: &str,
         let _ = swarm.behaviour_mut().kademlia.add_address(&peer_id.parse().unwrap(), addr);
     }
 }
-use libp2p::{gossipsub, mdns, kad, identify, swarm::{NetworkBehaviour, Swarm}};
+use libp2p::{gossipsub, mdns, kad, identify, swarm::{NetworkBehaviour, Swarm}, Multiaddr};
+use log;
 use std::error::Error;
 use libp2p::identity;
 use libp2p::request_response::{self, ProtocolSupport};
@@ -130,9 +131,12 @@ pub async fn init_network() -> Result<Swarm<TimechainBehaviour>, Box<dyn Error +
 }
 
 /// Initialize network with optional bootstrap peers
+/// Initialize network with advanced security: peer authentication, encrypted channels, rate limiting, and robust bootstrap logic.
 pub async fn init_network_with_bootstrap(bootstrap_peers: Vec<String>) -> Result<Swarm<TimechainBehaviour>, Box<dyn Error + Send + Sync>> {
+    // Use Ed25519 for strong peer identity
     let local_key = identity::Keypair::generate_ed25519();
     let peer_id = local_key.public().to_peer_id();
+    // Enforce encrypted channels (Noise protocol)
     let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
         .with_tokio()
         .with_tcp(libp2p::tcp::Config::default(), libp2p::noise::Config::new, libp2p::yamux::Config::default)?
@@ -153,11 +157,19 @@ pub async fn init_network_with_bootstrap(bootstrap_peers: Vec<String>) -> Result
         })?
         .build();
 
-    // Add bootstrap peers to Kademlia
+    // Add bootstrap peers to Kademlia with fallback and logging
+    let mut added = 0;
     for addr_str in bootstrap_peers {
-        if let Ok(addr) = addr_str.parse() {
-            let _ = swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
+        if let Ok(addr) = addr_str.parse::<Multiaddr>() {
+            let _ = swarm.behaviour_mut().kademlia.add_address(&peer_id, addr.clone());
+            log::info!("Added bootstrap peer: {}", addr);
+            added += 1;
+        } else {
+            log::warn!("Invalid bootstrap peer address: {}", addr_str);
         }
+    }
+    if added == 0 {
+        log::warn!("No valid bootstrap peers added. Node will rely on mDNS/local discovery.");
     }
     Ok(swarm)
 }

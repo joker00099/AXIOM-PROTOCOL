@@ -74,7 +74,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     println!("💳 Wallet Address: {:?}", hex::encode(wallet.address));
     println!("📁 Wallet file: ./wallet.dat (keep safe!)");
     let ai_guardian = Arc::new(Mutex::new(NeuralGuardian::new()));
-    let mut peer_message_counts: HashMap<PeerId, u32> = HashMap::new();
+    let mut peer_message_counts: HashMap<PeerId, (u32, Instant)> = HashMap::new();
 
     // Transaction mempool
     let mut mempool: VecDeque<Transaction> = VecDeque::new();
@@ -170,18 +170,28 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     loop {
         tokio::select! {
-            // --- P2P EVENT LOOP: AI-ASSISTED SPAM PROTECTION ---
+            // --- P2P EVENT LOOP: AI-ASSISTED SPAM & DOS PROTECTION ---
             event = swarm.select_next_some() => match event {
                 SwarmEvent::Behaviour(network::TimechainBehaviourEvent::Gossipsub(gossipsub::Event::Message {
                     propagation_source, message, ..
                 })) => {
-                    let count = peer_message_counts.entry(propagation_source).or_insert(0);
-                    *count += 1;
+                    // Rate limiting: allow max 100 messages per peer per minute
+                    let now = Instant::now();
+                    let entry = peer_message_counts.entry(propagation_source).or_insert((0, now));
+                    if now.duration_since(entry.1) > Duration::from_secs(60) {
+                        entry.0 = 0;
+                        entry.1 = now;
+                    }
+                    entry.0 += 1;
+                    if entry.0 > 100 {
+                        println!("🚨 DoS protection: Peer {} exceeded message rate limit, ignoring", propagation_source);
+                        continue;
+                    }
 
                     let mut ai = ai_guardian.lock().unwrap();
-                    let is_trustworthy = ai.predict_trust(1.0 / (*count as f32), 1.0, 1.0);
+                    let is_trustworthy = ai.predict_trust(1.0 / (entry.0 as f32), 1.0, 1.0);
 
-                    if is_trustworthy && *count <= 15 {
+                    if is_trustworthy && entry.0 <= 15 {
                         // 1) If this is a chain request, respond with our entire chain
                         if message.data == b"REQ_CHAIN" {
                             if let Ok(encoded) = bincode::serialize(&tc.blocks) {
@@ -240,7 +250,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                                 ai.train([1.0, 1.0, 1.0], 1.0);
                             }
                         }
-                    } else if *count > 20 {
+                    } else if entry.0 > 20 {
                         ai.train([0.1, 0.0, 0.0], 0.0);
                     }
                 },
