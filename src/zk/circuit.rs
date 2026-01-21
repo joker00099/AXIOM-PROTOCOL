@@ -191,10 +191,14 @@ impl ZkProofSystem {
     transfer_amount: Fr,
         fee: Fr,
     ) -> Result<(Proof<Bls12_381>, Vec<Fr>), String> {
+        // Pre-check: fail if balance is insufficient
+        if current_balance < transfer_amount + fee {
+            return Err("Insufficient balance: cannot spend more than available".to_string());
+        }
         let mut rng = thread_rng();
-    // Compute commitments
-    let commitment = secret_key + nonce;
-    let new_balance = current_balance - transfer_amount - fee;
+        // Compute commitments
+        let commitment = secret_key + nonce;
+        let new_balance = current_balance - transfer_amount - fee;
         let new_balance_commitment = secret_key + new_balance;
         let circuit = QubitTransactionCircuit {
             secret_key: Some(secret_key),
@@ -204,9 +208,9 @@ impl ZkProofSystem {
             transfer_amount: Some(transfer_amount),
             fee: Some(fee),
             new_balance_commitment: Some(new_balance_commitment),
-    };
-    // Public inputs for verification
-    let public_inputs = vec![commitment, transfer_amount, fee, new_balance_commitment];
+        };
+        // Public inputs for verification
+        let public_inputs = vec![commitment, transfer_amount, fee, new_balance_commitment];
         let proof = Groth16::<Bls12_381>::prove(&self.proving_key, circuit, &mut rng)
             .map_err(|e| format!("Proving failed: {:?}", e))?;
         Ok((proof, public_inputs))
