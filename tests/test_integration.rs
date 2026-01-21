@@ -18,7 +18,7 @@ fn test_block_validation_and_state() {
 
 #[test]
 fn test_vdf_wesolowski() {
-    let n = vdf::wesolowski_setup(128);
+    let n = vdf::wesolowski_setup(2048);
     let g = Integer::from(2);
     let t = 10u32;
     let (y, _pi) = vdf::wesolowski_prove(&g, t, &n);
