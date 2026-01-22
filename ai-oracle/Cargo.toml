@@ -1,0 +1,20 @@
+[package]
+name = "qubit-ai-oracle"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"
+chrono = "0.4"
+actix-web = "4.4"
+actix-cors = "0.7"
+env_logger = "0.11"
+
+[dev-dependencies]
+tokio-test = "0.4"
