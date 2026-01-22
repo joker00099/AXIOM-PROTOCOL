@@ -1,3 +1,45 @@
+## 🕰️ Verifiable Delay Function (VDF)
+
+Qubit Protocol uses the Wesolowski VDF for consensus timing and fairness. The VDF requires a secure RSA modulus (N), which in production is generated from two large random primes (2048 bits or more). This ensures strong cryptographic delay guarantees.
+
+**Fast Testing Solution:**  
+Generating a secure 2048-bit modulus is slow and impractical for CI/CD. For tests, we use a pre-generated, well-known 2048-bit modulus from academic literature.  
+- This allows tests to run in seconds, not minutes.
+- The test-only function `wesolowski_setup_test()` is used in tests and must never be used in production.
+
+**Security Note:**  
+- Production deployments must use `wesolowski_setup()` to generate a fresh, secret modulus.
+- The test modulus is public and not secure for real-world use.
+
+**VDF Test Example:**
+```rust
+#[test]
+fn test_vdf_wesolowski() {
+    let n = vdf::wesolowski_setup_test(); // Fast, fixed 2048-bit modulus
+    let g = Integer::from(2);
+    let t = 10u32;
+    let (y, _pi) = vdf::wesolowski_prove(&g, t, &n);
+    assert!(vdf::wesolowski_verify(&g, t, &n, &y));
+}
+```
+
+## 🤖 AI Engine
+
+Qubit Protocol integrates an AI engine for network protection and anomaly detection:
+- **ONNX Runtime** is used for running pre-trained neural networks.
+- The AI engine monitors peer behavior, transaction patterns, and network health in real time.
+- It can detect and respond to attacks, spam, and abnormal activity, improving network resilience.
+
+**Key Features:**
+- Pluggable AI models (updateable without protocol changes)
+- Real-time inference with low latency
+- Integration with consensus and governance for automated responses
+
+**How it works:**
+- The AI engine loads models at startup and continuously analyzes network data.
+- Detected anomalies can trigger alerts, slashing, or automated governance actions.
+
+See `src/ai_engine.rs` and `src/ai_logic.rs` for implementation details.
 # Qubit Protocol (84M) - Production-Ready Blockchain 🏛️
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)

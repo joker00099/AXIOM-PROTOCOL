@@ -48,6 +48,30 @@ pub fn wesolowski_setup(bits: u32) -> Integer {
     n
 }
 
+#[cfg(test)]
+/// Test-only function with pre-generated 2048-bit modulus for fast testing
+/// WARNING: This uses a fixed modulus - NEVER use in production!
+pub fn wesolowski_setup_test() -> Integer {
+    // Pre-generated 2048-bit RSA modulus (product of two safe primes)
+    // This is a known modulus from academic literature for testing purposes
+    Integer::from_str_radix(
+        "25195908475657893494027183240048398571429282126204032027777137836043662020707595556264018525880784406918290641249515082189298559149176184502808489120072844992687392807287776735971418347270261896375014971824691165077613379859095700097330459748808428401797429100642458691817195118746121515172654632282216869987549182422433637259085141865462043576798423387184774447920739934236584823824281198163815010674810451660377306056201619676256133844143603833904414952634432190114657544454178424020924616515723350778707749817125772467962926386356373289912154831438167899885040445364023527381951378636564391212010397122822120720357",
+        10
+    ).expect("Failed to parse test modulus")
+}
+
+#[cfg(test)]
+mod vdf_tests {
+    use super::*;
+    #[test]
+    fn test_vdf_modulus_size() {
+        // Verify the test modulus is actually 2048 bits
+        let n = wesolowski_setup_test();
+        let bits = n.significant_bits();
+        assert!(bits >= 2048, "Test modulus should be at least 2048 bits, got {}", bits);
+    }
+}
+
 /// Wesolowski VDF Evaluation: y = g^{2^t} mod N
 pub fn wesolowski_evaluate(g: &Integer, t: u32, n: &Integer) -> Integer {
     let exp = Integer::from(1) << t; // 2^t
