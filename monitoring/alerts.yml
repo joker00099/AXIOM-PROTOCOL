@@ -1,0 +1,85 @@
+# Axiom Protocol Alert Rules
+
+groups:
+  - name: axiom_alerts
+    interval: 30s
+    rules:
+      # Node is down
+      - alert: AxiomNodeDown
+        expr: up{job="axiom-node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Axiom node is down"
+          description: "Node {{ $labels.instance }} has been down for 2 minutes"
+      
+      # Block production stopped
+      - alert: BlockProductionStalled
+        expr: rate(axiom_blocks_total[5m]) == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Block production has stalled"
+          description: "No blocks produced in last 10 minutes"
+      
+      # High VDF computation time
+      - alert: HighVDFTime
+        expr: axiom_vdf_duration_seconds > 3900
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "VDF computation taking too long"
+          description: "VDF time: {{ $value }}s (expected: 3600s)"
+      
+      # Bridge oracle offline
+      - alert: BridgeOracleOffline
+        expr: up{job="bridge-oracle"} == 0
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Bridge oracle is offline"
+          description: "Oracle {{ $labels.instance }} offline for 5 minutes"
+      
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage: {{ $value }}%"
+      
+      # High disk usage
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage: {{ $value }}%"
+      
+      # Energy consumption spike
+      - alert: EnergyConsumptionSpike
+        expr: rate(axiom_energy_total_wh[5m]) > 200
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Energy consumption spike detected"
+          description: "Energy rate: {{ $value }} Wh/5m"
+      
+      # Low peer count
+      - alert: LowPeerCount
+        expr: axiom_peer_count < 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low peer count"
+          description: "Only {{ $value }} peers connected"

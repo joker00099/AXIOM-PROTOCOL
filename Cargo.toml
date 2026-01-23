@@ -75,6 +75,18 @@ num_cpus = "1.16"
 chrono = "0.4"
 log = "0.4.29"
 
+# 2026 Best Practices Dependencies
+# Privacy: View keys & selective disclosure
+aes-gcm = "0.10"
+
+# Monitoring: Prometheus metrics (optional feature)
+prometheus = { version = "0.13", optional = true }
+lazy_static = { version = "1.4", optional = true }
+
+[features]
+default = []
+prometheus = ["dep:prometheus", "dep:lazy_static"]
+
 [profile.release]
 opt-level = 3            # Maximum speed for VDF loops
 lto = "fat"              # Full Link-Time Optimization for cross-crate speed

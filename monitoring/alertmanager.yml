@@ -1,0 +1,37 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: ${SLACK_WEBHOOK_URL}
+
+route:
+  group_by: ['alertname', 'cluster']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'team-notifications'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      continue: true
+    - match:
+        severity: warning
+      receiver: 'team-notifications'
+
+receivers:
+  - name: 'critical-alerts'
+    slack_configs:
+      - channel: '#axiom-critical'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}'
+    
+  - name: 'team-notifications'
+    slack_configs:
+      - channel: '#axiom-alerts'
+        title: '⚠️ {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+    email_configs:
+      - to: 'team@axiom.network'
+        from: 'alerts@axiom.network'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: ${SMTP_USERNAME}
+        auth_password: ${SMTP_PASSWORD}
