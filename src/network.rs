@@ -1,5 +1,13 @@
 use std::collections::HashSet;
-use std::net::TcpStream;
+use libp2p::{gossipsub, mdns, kad, identify, swarm::{NetworkBehaviour, Swarm}, Multiaddr};
+use log;
+use std::error::Error;
+use libp2p::identity;
+use libp2p::request_response::{self, ProtocolSupport};
+use futures::io::{AsyncRead, AsyncWrite, AsyncReadExt, AsyncWriteExt};
+use std::io;
+use serde::{Serialize, Deserialize};
+use crate::block::Block;
 
 /// External validator registry
 #[derive(Default)]
@@ -23,15 +31,6 @@ pub fn add_external_peer(swarm: &mut Swarm<TimechainBehaviour>, peer_addr: &str,
         let _ = swarm.behaviour_mut().kademlia.add_address(&peer_id.parse().unwrap(), addr);
     }
 }
-use libp2p::{gossipsub, mdns, kad, identify, swarm::{NetworkBehaviour, Swarm}, Multiaddr};
-use log;
-use std::error::Error;
-use libp2p::identity;
-use libp2p::request_response::{self, ProtocolSupport};
-use futures::io::{AsyncRead, AsyncWrite, AsyncReadExt, AsyncWriteExt};
-use std::io;
-use serde::{Serialize, Deserialize};
-use crate::block::Block;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ChainRequest { pub start_height: u64 }
@@ -175,19 +174,27 @@ pub async fn init_network_with_bootstrap(bootstrap_peers: Vec<String>) -> Result
     Ok(swarm)
 }
 
-/// Utility: Check connectivity to bootstrap nodes
+/// Utility: Check connectivity to bootstrap nodes (non-blocking)
 pub fn check_bootstrap_connectivity() {
-    let nodes = [
-        ("34.145.123.45", 6000),
-        ("35.246.89.12", 6000),
-        ("13.237.156.78", 6000),
-        ("52.67.234.89", 6000),
-    ];
-    for (ip, port) in nodes.iter() {
-        let addr = format!("{}:{}", ip, port);
-        match TcpStream::connect(&addr) {
-            Ok(_) => println!("✅ Connected to bootstrap node: {}", addr),
-            Err(e) => println!("❌ Could not connect to {}: {}", addr, e),
+    println!("🔍 Checking bootstrap connectivity...");
+    // Spawn async checks to avoid blocking main thread
+    tokio::spawn(async {
+        let nodes = [
+            ("34.145.123.45", 6000),
+            ("35.246.89.12", 6000),
+            ("13.237.156.78", 6000),
+            ("52.67.234.89", 6000),
+        ];
+        for (ip, port) in nodes.iter() {
+            let addr = format!("{}:{}", ip, port);
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(2),
+                tokio::net::TcpStream::connect(&addr)
+            ).await {
+                Ok(Ok(_)) => println!("✅ Connected to bootstrap node: {}", addr),
+                Ok(Err(e)) => println!("⚠️  Could not connect to {}: {}", addr, e),
+                Err(_) => println!("⚠️  Connection to {} timed out", addr),
+            }
         }
-    }
+    });
 }
