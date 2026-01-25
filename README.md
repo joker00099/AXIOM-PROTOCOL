@@ -374,6 +374,138 @@ cargo run --release --bin axiom-supply
 
 ## 📖 Usage
 
+### 🖥️ Understanding Node Status
+
+When you run `./target/release/axiom`, you'll see a dashboard like this:
+
+```
+--- 🏛️  AXIOM STATUS ---
+⛓️  Height: 5 | Diff: 1000 | Trend: STABLE ↔️
+⏳ Time-Lock: 43m remaining | 🤖 AI Shield: ACTIVE
+💰 Mined: 200.00000000 AXM | Remaining: 1239999800.00000000 AXM | 0.00% of max supply
+🌐 Network Status:
+   ├─ PeerId: 12D3KooWNLCeLr4aVVfvT7zeCw9oXKcTQSoxFB2PE1aMRN75Ubai
+   ├─ Connected Peers: 0
+   │  └─ No peers connected (check firewall/NAT)
+   └─ Listen Addresses:
+      └─ /ip4/127.0.0.1/tcp/6005
+      └─ /ip4/10.255.255.254/tcp/6005
+      └─ /ip4/172.20.208.232/tcp/6005
+      └─ /ip4/172.17.0.1/tcp/6005
+```
+
+#### 📊 Dashboard Explanation
+
+| Metric | Meaning | Details |
+|--------|---------|---------|
+| **Height** | Current blockchain height | Number of blocks mined locally |
+| **Diff** | Mining difficulty | Target for Proof-of-Work (auto-adjusts) |
+| **Trend** | Difficulty trend | UP ⬆️, DOWN ⬇️, or STABLE ↔️ |
+| **Time-Lock** | VDF countdown | Time until next block can be mined (1 hour) |
+| **AI Shield** | Neural Guardian status | ACTIVE = monitoring network for attacks |
+| **Mined** | Total mined supply | AXM minted so far (50 AXM per block) |
+| **Remaining** | Unmined supply | 124M AXM - Mined |
+| **PeerId** | Your node's unique ID | libp2p peer identifier |
+| **Connected Peers** | Active connections | Other nodes you're syncing with |
+| **Listen Addresses** | Your node's addresses | Where other peers can connect to you |
+
+#### 🔍 Why Is Height 5 and Not Syncing?
+
+Your node shows **Height: 5** because:
+
+1. **Local Mining**: Your node has mined 5 blocks locally
+2. **No Peer Connections**: `Connected Peers: 0` means you're isolated
+3. **No Network Sync**: Without peers, you can't receive their blockchain
+
+**This is normal for a standalone node in development!**
+
+#### 🌐 Network Synchronization Explained
+
+```
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│   Node A        │◄─────►│   Node B        │◄─────►│   Node C        │
+│   Height: 100   │       │   Height: 100   │       │   Height: 100   │
+└─────────────────┘       └─────────────────┘       └─────────────────┘
+         ▲                         ▲                         ▲
+         │                         │                         │
+         └─────────────────────────┴─────────────────────────┘
+                    Gossipsub Protocol (libp2p)
+
+When you connect, your node:
+1. Broadcasts "REQ_CHAIN" to all peers
+2. Receives their full blockchain
+3. Validates each block cryptographically
+4. Adopts the longest valid chain
+5. Height syncs to 100 automatically!
+```
+
+#### 🔧 How to Get Peers and Sync
+
+**Option 1: Local Multi-Node Network (Best for Testing)**
+```bash
+# Terminal 1: Node 1 (port 6000)
+./target/release/axiom
+
+# Terminal 2: Node 2 (port 6001) - connects to Node 1
+./target/release/axiom --port 6001 --bootnodes /ip4/127.0.0.1/tcp/6000/p2p/<node1-peer-id>
+
+# Terminal 3: Node 3 (port 6002) - connects to Node 1
+./target/release/axiom --port 6002 --bootnodes /ip4/127.0.0.1/tcp/6000/p2p/<node1-peer-id>
+
+# Now all nodes sync to the same height!
+```
+
+**Option 2: Docker Network (Easiest)**
+```bash
+docker-compose up -d
+# Launches 3 nodes that auto-connect and sync
+```
+
+**Option 3: Join Mainnet (Production)**
+```bash
+# Use mainnet bootnodes from config/bootstrap.toml
+./target/release/axiom --bootnodes /ip4/34.145.123.45/tcp/6000/p2p/<bootnode-peer-id>
+```
+
+#### 🚀 What Happens When Peers Connect
+
+```
+Before Connection:
+Node A: Height 5 | Peers: 0 | Status: Isolated
+Node B: Height 0 | Peers: 0 | Status: Isolated
+
+After Connection:
+Node A: Height 5 | Peers: 1 | Status: Broadcasting blocks to B
+Node B: Height 5 | Peers: 1 | Status: Synced from A
+
+Consensus Process:
+1. mDNS discovers Node B
+2. libp2p establishes connection
+3. Node A broadcasts its 5 blocks
+4. Node B validates and adopts them
+5. Both continue mining together
+6. Longest valid chain wins
+```
+
+#### 📡 AI Stats Monitoring
+
+The dashboard also exports AI statistics to `ai_stats.json`:
+```json
+{
+  "total_predictions": 0,
+  "spam_detected": 0,
+  "onnx_model_used": 0,
+  "fallback_used": 0,
+  "avg_confidence": 0.0
+}
+```
+
+**Live monitoring:**
+```bash
+# Watch AI stats in real-time
+watch -n 1 cat ai_stats.json
+```
+
 ### Block Explorer API
 
 The explorer exposes REST endpoints for block and state queries:
@@ -444,6 +576,342 @@ The node displays real-time network status every 10 seconds:
 
 # Show transaction history
 ./target/release/axiom-wallet history
+```
+
+### 🛠️ Node Technical Architecture
+
+#### Core Mining Loop (Every 1 Hour)
+
+```rust
+// Simplified view of src/main.rs mining logic
+VDF Timer (3600s) → {
+    1. Check if 1 hour has elapsed
+    2. Calculate VDF seed from parent block
+    3. Generate VDF proof (Wesolowski)
+    4. Create ZK-SNARK proof for miner identity
+    5. Select transactions from mempool (max 100)
+    6. Start PoW mining loop:
+       - Try nonces 0..100,000
+       - Check if hash meets difficulty
+       - If found: broadcast block, save to storage
+       - If not found: reduce difficulty by 10
+    7. Reset timer and repeat
+}
+```
+
+#### Network Event Processing
+
+```rust
+// P2P event handling
+Swarm Events:
+├── Gossipsub Message → Validate & add block/transaction
+├── ConnectionEstablished → Update peer count
+├── ConnectionClosed → Remove peer from set
+├── mDNS Discovery → Request chain from new peer
+├── Kademlia Discovery → Add peer to routing table
+└── Identify → Log peer protocol version
+
+Chain Synchronization:
+1. Receive "REQ_CHAIN" message
+2. Broadcast entire blockchain to requester
+3. Peer validates genesis block match
+4. Peer validates each block sequentially
+5. Peer adopts chain if longer & valid
+6. Consensus achieved!
+```
+
+#### Storage & State Management
+
+| File | Purpose | Format |
+|------|---------|--------|
+| `wallet.dat` | Ed25519 private key | Binary (keep secure!) |
+| `chain.dat` | Blockchain blocks | Bincode serialized Vec<Block> |
+| `ai_stats.json` | AI Guardian metrics | JSON (live updates) |
+| `genesis.json` | Genesis configuration | JSON (consensus rules) |
+
+```bash
+# View persisted data
+ls -lh *.dat *.json
+
+# Backup your wallet (IMPORTANT!)
+cp wallet.dat wallet-backup-$(date +%Y%m%d).dat
+
+# Reset blockchain (keep wallet)
+rm chain.dat
+# Node will restart from genesis block
+```
+
+#### 🔐 Cryptographic Components
+
+**Transaction Flow:**
+```
+Wallet → Create TX → Sign (Ed25519) → Broadcast (Gossipsub)
+  ↓
+Mempool (VecDeque) → Validate (nonce, balance, signature)
+  ↓
+Mining → Include in block (max 100 TXs) → ZK-SNARK proof
+  ↓
+Block → Hash meets difficulty → Broadcast → Peers validate
+  ↓
+Chain → Add block → Save to storage → Update UTXO state
+```
+
+**Consensus Rules:**
+- **Block Time**: 3600 seconds (1 hour) enforced by VDF
+- **Difficulty**: Auto-adjusts if mining fails (min: 10)
+- **Reward**: 50 AXM per block (halves every 2.1M blocks)
+- **Genesis**: 1,000,000 AXM pre-mine for development
+- **Validation**: Parent hash, VDF proof, PoW difficulty, ZK proof
+
+#### 🤖 AI Guardian (Neural Network)
+
+```
+Real-time Monitoring:
+├── Message Rate Limiting: >100 msg/sec = DoS
+├── Peer Trust Scoring: message_count, connection_time
+├── Attack Detection: selfish mining, eclipse, sybil
+└── ONNX Model: mobilenet_v2.onnx (fallback to heuristics)
+
+Training:
+- Honest behavior: train([1.0, 1.0, 1.0], 1.0)
+- Suspicious behavior: train([0.1, 0.0, 0.0], 0.0)
+- Adaptive learning based on network behavior
+```
+
+#### 🌐 Network Ports & Protocols
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 6000 | TCP | libp2p P2P communication |
+| 6001 | TCP | Node 2 (if multi-node) |
+| 6002 | TCP | Node 3 (if multi-node) |
+| 8080 | HTTP | Block explorer API |
+| 5353 | UDP | mDNS peer discovery (LAN) |
+
+**Firewall Configuration:**
+```bash
+# Allow P2P connections
+sudo ufw allow 6000/tcp
+sudo ufw allow 6001/tcp
+sudo ufw allow 6002/tcp
+
+# Allow explorer API (optional)
+sudo ufw allow 8080/tcp
+
+# Allow mDNS (LAN discovery)
+sudo ufw allow 5353/udp
+```
+
+#### 📊 Performance Metrics
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **VDF Computation** | ~30-60 seconds | Depends on CPU |
+| **PoW Mining** | ~10-300 seconds | Depends on difficulty |
+| **Block Validation** | <1 second | Includes ZK proof verification |
+| **Transaction Verification** | <100ms | Ed25519 signature check |
+| **P2P Latency** | <200ms | LAN/WAN dependent |
+| **Memory Usage** | ~200-500MB | Includes AI model |
+| **Disk Usage** | ~10MB per 1000 blocks | Compressed blockchain |
+
+### 🔧 Troubleshooting
+
+#### ❓ "Height is 5 but not syncing to higher blocks"
+
+**Diagnosis**: `Connected Peers: 0` means your node is isolated.
+
+**Root Cause**: No peer connections = no blockchain synchronization.
+
+**Solutions**:
+
+**1. Local Multi-Node Setup (Recommended for Testing)**
+```bash
+# Terminal 1: Start first node
+./target/release/axiom
+# Copy the PeerId from the output, e.g.: 12D3KooWNLCeLr4aVVfvT7zeCw9oXKcTQSoxFB2PE1aMRN75Ubai
+
+# Terminal 2: Start second node and connect to first
+./target/release/axiom --port 6001 --bootnodes /ip4/127.0.0.1/tcp/6000/p2p/12D3KooWNLCeLr4aVVfvT7zeCw9oXKcTQSoxFB2PE1aMRN75Ubai
+
+# Now both nodes will sync and mine together!
+```
+
+**2. Docker Network (Easiest)**
+```bash
+docker-compose up -d
+# Automatically launches 3 nodes that connect and sync
+docker-compose logs -f  # Watch them sync in real-time
+```
+
+**3. Join Public Network**
+```bash
+# Get bootnode address from config/bootstrap.toml
+./target/release/axiom --bootnodes /ip4/34.145.123.45/tcp/6000/p2p/12D3KooWAbc...
+```
+
+#### ❓ "How do I know if syncing is working?"
+
+**Look for these log messages**:
+```
+🔎 mDNS discovered peer: 12D3KooWXyz... at /ip4/192.168.1.100/tcp/6000
+🔗 Peer connected: 12D3KooWXyz... | Total peers: 1
+📥 Requesting chain from peer: 12D3KooWXyz...
+🔁 Synced complete chain from peer. New height: 42
+✅ Block accepted and added to chain
+```
+
+**Dashboard shows progress**:
+```
+⛓️  Height: 1 → 10 → 42 → ... (increases)
+🌐 Connected Peers: 1 → 2 → 3 (increases)
+```
+
+#### ❓ "Node shows 0 connected peers"
+
+**Check 1: Firewall**
+```bash
+# Linux
+sudo ufw status
+sudo ufw allow 6000/tcp
+
+# macOS
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+# Add exception in System Preferences → Security & Privacy
+
+# Windows
+netsh advfirewall firewall add rule name="Axiom P2P" dir=in action=allow protocol=TCP localport=6000
+```
+
+**Check 2: NAT/Port Forwarding**
+```bash
+# If behind router, forward port 6000 TCP to your machine
+# Router admin panel → Port Forwarding → Add Rule:
+#   External Port: 6000
+#   Internal IP: 192.168.1.X (your machine)
+#   Internal Port: 6000
+#   Protocol: TCP
+```
+
+**Check 3: Listen Addresses**
+```
+Should see:
+✓ /ip4/0.0.0.0/tcp/6000  (good - listening on all interfaces)
+✓ /ip4/192.168.1.X/tcp/6000  (good - LAN address)
+
+Should NOT see only:
+✗ /ip4/127.0.0.1/tcp/6000  (bad - localhost only)
+```
+
+**Fix: Bind to all interfaces**
+```bash
+# Edit src/main.rs if needed
+Swarm::listen_on("/ip4/0.0.0.0/tcp/6000")
+```
+
+#### ❓ "Mining is slow or failing"
+
+**Check 1: Difficulty too high**
+```
+⚠️  Mining failed, reducing difficulty to 990
+```
+This is normal! Difficulty auto-adjusts. Wait for next attempt.
+
+**Check 2: VDF computation**
+```bash
+# VDF takes 30-60 seconds on modern CPUs
+# If taking longer, check CPU usage:
+top  # Should see axiom using 100% of 1 core during VDF
+```
+
+**Check 3: PoW nonce limit**
+```rust
+// In src/main.rs
+let max_attempts = 100000;  // Increase if needed
+```
+
+#### ❓ "Transaction not appearing in mempool"
+
+**Validation Checklist**:
+1. **Signature**: Must be valid Ed25519
+2. **Nonce**: Must match account state
+3. **Balance**: Sender must have enough AXM
+4. **Fee**: Must be ≥ 0.00000100 AXM
+5. **Not duplicate**: Same TX cannot be in mempool twice
+
+**Debug**:
+```bash
+# Check mempool size
+# Look for this log:
+✅ Transaction added to mempool  # Good
+⚠️  Transaction validation failed: ...  # Check error
+```
+
+#### ❓ "AI stats show all zeros"
+
+**Normal if**:
+- No peers connected yet (nothing to analyze)
+- Network just started (no activity yet)
+
+**AI activates when**:
+- Peers connect and exchange messages
+- Blocks/transactions are received
+- Network activity increases
+
+**Force AI test**:
+```bash
+# Connect 2+ nodes and send transactions
+# AI will log predictions:
+🤖 AI Trust Score: 0.85 for peer 12D3KooWXyz...
+```
+
+#### ❓ "Chain reset / lost blocks"
+
+**Recover from backup**:
+```bash
+cp chain-backup.dat chain.dat
+./target/release/axiom
+```
+
+**Start fresh**:
+```bash
+rm chain.dat  # Keeps wallet.dat safe
+./target/release/axiom  # Starts from genesis
+```
+
+#### ❓ "Wallet file missing"
+
+**If `wallet.dat` is lost**:
+- ⚠️ **Private key is LOST FOREVER**
+- Cannot recover funds (no seed phrase)
+- Create new wallet:
+```bash
+rm wallet.dat
+./target/release/axiom  # Generates new wallet
+```
+
+**Prevention**:
+```bash
+# Backup wallet regularly
+cp wallet.dat ~/backups/axiom-wallet-$(date +%Y%m%d).dat
+```
+
+#### ❓ "Docker nodes can't connect"
+
+**Check Docker network**:
+```bash
+docker network ls
+docker network inspect axiom-protocol_default
+
+# Should show 3 containers with IPs like:
+# validator-1: 172.20.0.2
+# validator-2: 172.20.0.3
+# validator-3: 172.20.0.4
+```
+
+**Check logs**:
+```bash
+docker-compose logs validator-1 | grep "Peer connected"
+# Should see connections to other validators
 ```
 
 ### Development
