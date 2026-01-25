@@ -351,17 +351,52 @@ cargo build --release
 # - Activate AI network protection
 ```
 
-### 2. Create a Wallet
+### 2. Wallet Management
+
+#### 💳 Built-In Wallet System
+
+Axiom has a **built-in self-custodial wallet** - no MetaMask or external wallet needed!
+
+**Wallet Type**: Ed25519 Cryptographic Wallet (same as Solana, Cardano, Polkadot)  
+**Storage**: `wallet.dat` (64 bytes - automatically created on first run)  
+**Security**: Military-grade Ed25519 + Zero-Knowledge proofs for privacy
+
 ```bash
-# Generate a new wallet
-cargo run --release --bin axiom-wallet -- export
+# Build wallet CLI tool
+cargo build --release --bin axiom-wallet
+
+# Show your wallet address and details
+./target/release/axiom-wallet show
+
+# Export address only (for receiving payments)
+./target/release/axiom-wallet export
 
 # Check your balance
-cargo run --release --bin axiom-wallet -- balance <your-address>
+./target/release/axiom-wallet balance
 
-# Create a transaction
-cargo run --release --bin axiom-wallet -- send <to-address> <amount> <fee>
+# Send a transaction
+./target/release/axiom-wallet send <recipient-address> <amount> <fee>
+
+# Example: Send 10.5 AXM with 0.001 AXM fee
+./target/release/axiom-wallet send abc123...def456 10.5 0.001
 ```
+
+#### 🔐 Wallet Security
+
+⚠️ **CRITICAL**: `wallet.dat` contains your SECRET KEY!
+- If lost → funds lost forever (no recovery)
+- If stolen → someone can steal all your AXM
+- **BACKUP NOW**: `cp wallet.dat ~/backups/wallet-$(date +%Y%m%d).dat`
+
+**Security Features:**
+- ✅ Self-custodial (you control the private key)
+- ✅ Offline storage (private key never sent over network)
+- ✅ Ed25519 signatures (military-grade cryptography)
+- ✅ ZK-SNARK proofs (balance privacy)
+- ✅ Automatic creation (generated on first node run)
+
+**Address Format**: 32-byte hex string (64 characters)  
+**Example**: `ba37f7d0a37a257d455f16b4f9d99ef37aba4a66a0028984b1a60cbc5e42da27`
 
 ### 3. Check Network Status
 ```bash
@@ -563,19 +598,65 @@ The node displays real-time network status every 10 seconds:
 👋 Identified peer: 12D3KooWDef... (axiom/1.0.0)
 ```
 
-### Wallet Operations
-```bash
-# Export wallet address
-./target/release/axiom-wallet export
+### 💳 Wallet Operations
 
-# Check balance
-./target/release/axiom-wallet balance <address>
+Axiom uses a **built-in Ed25519 wallet** stored in `wallet.dat` - no MetaMask needed!
+
+```bash
+# Build wallet tool
+cargo build --release --bin axiom-wallet
+
+# Show full wallet details
+./target/release/axiom-wallet show
+# Output: 💳 Axiom Wallet Details
+#         Address (hex): ba37f7d0a37a257d455f16b4f9d99ef37aba4a66a0028984b1a60cbc5e42da27
+#         Address length: 32 bytes
+#         ⚠️  KEEP wallet.dat SAFE - it contains your secret key!
+
+# Export address only (for receiving payments)
+./target/release/axiom-wallet export
+# Output: ba37f7d0a37a257d455f16b4f9d99ef37aba4a66a0028984b1a60cbc5e42da27
+
+# Check your balance
+./target/release/axiom-wallet balance
+# Output: 💰 Balance: 250.00000000 AXM
 
 # Send transaction
 ./target/release/axiom-wallet send <recipient> <amount> <fee>
+# Example: ./target/release/axiom-wallet send abc123...def 10.5 0.001
+# Output: ✅ Transaction created and saved to pending_tx.dat
+#         📤 Run the axiom node to broadcast this transaction
 
-# Show transaction history
-./target/release/axiom-wallet history
+# CRITICAL: Backup your wallet immediately!
+cp wallet.dat ~/backups/wallet-$(date +%Y%m%d).dat
+chmod 600 wallet.dat  # Secure file permissions
+
+# Monitor balance continuously
+watch -n 60 './target/release/axiom-wallet balance'
+```
+
+**Wallet Features:**
+- 🔑 **Ed25519 Cryptography**: 32-byte keys (same as Solana, Cardano)
+- 🔒 **Self-Custodial**: You control the private key (no third party)
+- 🛡️ **ZK-SNARK Proofs**: Transaction privacy (balance never revealed)
+- 💾 **Single File**: `wallet.dat` (64 bytes total)
+- ⚡ **Automatic Creation**: Generated on first node run
+- 🚫 **No MetaMask**: Built directly into the node
+
+**Security Warning:**
+⚠️ If you lose `wallet.dat`, your AXM is **LOST FOREVER** (no recovery possible!)  
+⚠️ If someone steals `wallet.dat`, they can **STEAL ALL YOUR AXM**  
+⚠️ **BACKUP NOW**: `cp wallet.dat ~/backups/wallet-backup.dat`
+
+**Transaction Flow:**
+```
+1. Create TX:  axiom-wallet send <to> <amount> <fee>
+2. ZK Proof:   Wallet proves balance without revealing amount
+3. Sign:       Ed25519 signature with private key
+4. Save:       Transaction written to pending_tx.dat
+5. Broadcast:  Node sends TX to network (Gossipsub)
+6. Mining:     Miners include in next block
+7. Confirm:    Transaction becomes permanent on blockchain
 ```
 
 ### 🛠️ Node Technical Architecture
