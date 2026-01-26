@@ -25,7 +25,7 @@ actix-rt = "2.9"
 # Wesolowski VDF (Big Integer Support)
 rug = "1.20"
 # Networking (Hardened P2P)
-libp2p = { version = "0.54", features = ["macros", "gossipsub", "mdns", "kad", "identify", "tcp", "tokio", "noise", "yamux", "dns", "request-response"] }
+libp2p = { version = "0.54", features = ["macros", "gossipsub", "mdns", "kad", "identify", "tcp", "quic", "websocket", "tokio", "noise", "yamux", "dns", "request-response"] }
 tokio = { version = "1.35", features = ["full"] }
 futures = "0.3"
 

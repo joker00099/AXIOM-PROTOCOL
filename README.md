@@ -1,203 +1,50 @@
-# 🔺 AXIOM Protocol - Privacy is Axiomatic
+AXIOM Protocol — Academic Summary
 
-**Production-ready privacy blockchain with ZK-SNARKs, VDF consensus, and AI Oracle network.**
+Abstract
 
-## 🚀 Mainnet Status: READY FOR DEPLOYMENT
+AXIOM is a privacy-preserving blockchain protocol that prioritizes verifiable mathematical properties over financial narratives. The protocol combines a Verifiable Delay Function (Wesolowski VDF) with Proof-of-Work to yield time-based fairness, and Groth16 ZK-SNARKs on BLS12-381 to enable private transaction validation.
 
-[![Mainnet Ready](https://img.shields.io/badge/mainnet-ready-brightgreen)](MAINNET-DEPLOYMENT.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests: 11/11 Passing](https://img.shields.io/badge/tests-11%2F11%20passing-success)](src/)
+Design Principles
 
-**Latest:** [Core Hardening Complete](CORE-HARDENING-COMPLETE.md) | [Mainnet Deployment Guide](MAINNET-DEPLOYMENT.md)
+- Mathematical scarcity: supply defined and provable by protocol rules.
+- Provable supply cap: the monetary policy is encoded in consensus and deterministically enforced.
+- Verifiable economics: all issuance and fee mechanisms are transparent and auditable by protocol observers.
+- Fixed-supply protocol: supply schedule is deterministic and immutable in the genesis state.
 
-## 🟢 Production Status
+Technical Highlights
 
-**Version**: 1.0.0  
-**Cryptographic Parameters**: Production-grade (2048-bit RSA, BLS12-381, Ed25519)  
-**Documentation**: Complete ([WHITEPAPER.md](WHITEPAPER.md) | [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md))
+- Consensus: VDF + PoW hybrid. VDF enforces sequential time delay; PoW provides Sybil resistance.
+- Privacy: Groth16 ZK-SNARK circuit for transaction correctness and balance preservation without revealing values.
+- Signatures: Ed25519 for transaction authentication.
+- Storage: deterministic, account-based model with nonces to prevent double-spend.
+- Networking: libp2p-based peer-to-peer transport with gossipsub propagation and authenticated channels.
 
----
+Genesis and Launch
 
-## Overview
+- Genesis timestamp: February 1, 2025 00:00:00 UTC (immutable in `src/genesis.rs`).
+- Launch process: anonymous, permissionless anchor without governance or token pre-allocation.
 
-Axiom implements a hybrid consensus mechanism combining time-based fairness with privacy:
-- **Verifiable Delay Functions (VDFs)**: Production Wesolowski VDF with secure 2048-bit RSA modulus generation
-- **Proof-of-Work**: SHA-256 with dynamic difficulty adjustment
-- **Zero-Knowledge SNARKs**: Groth16 on BLS12-381 curve for private transactions
-- **Digital Signatures**: Ed25519 for transaction authorization
+Security
 
-**Key Features**:
-- 🔒 **Privacy-First**: All transactions use ZK-SNARKs (no transparent transactions)
-- ⏱️ **Time-Based Fairness**: VDF prevents mining advantages through parallelization
-- 💎 **Fixed Supply**: Exactly 124,000,000 AXM (Bitcoin's 21M × 5.9)
-- 🌐 **Decentralized**: No governance, no foundation, no pre-mine
-- 🛡️ **Production-Grade Crypto**: All parameters reviewed and hardened
-- ⚡ **LWMA Difficulty**: Flash mining protection with 60-block weighted average
-- ⏰ **30-Minute Blocks**: Optimized for network stability and throughput
+- Cryptographic primitives: production-grade parameters (2048-bit RSA modulus for VDF, BLS12-381 for ZK-SNARKs, Ed25519 signatures).
+- Trusted setup: multi-party ceremony recommended; a coordinator script is provided for transparency.
+- Auditability: all protocol rules are encoded in open-source code and can be audited by third parties.
 
----
+Usage and Verification
 
-## 🕰️ Verifiable Delay Function (VDF)
+To verify repository claims:
 
-Axiom uses the Wesolowski VDF for consensus timing and fairness.
+```bash
+# Build
+cargo build --release
 
-### Production VDF
-
-**Security**: 112-bit security level (2048-bit RSA modulus)
-
-```rust
-// Production setup (src/vdf.rs)
-pub fn wesolowski_setup(bits: u32) -> Integer {
-    // Generates fresh random primes using OsRng
-    // Enforces minimum 2048 bits outside test builds
-    // Miller-Rabin primality testing (40 rounds)
-}
+# Run core tests
+cargo test
 ```
 
-**No shortcuts**: Production code (`wesolowski_setup`) generates a fresh RSA modulus using cryptographically secure randomness. This takes several minutes but ensures security.
+Concluding Note
 
-### Test-Only VDF
-
-For fast CI/CD testing, a separate function `wesolowski_setup_test()` exists:
-- Available only in `#[cfg(test)]` builds
-- Uses pre-generated 2048-bit modulus from academic literature
-- **Never used in production code**
-- Allows tests to run in seconds instead of minutes
-
-```rust
-#[cfg(test)]
-#[test]
-fn test_vdf_wesolowski() {
-    let n = vdf::wesolowski_setup_test(); // Test-only, not production
-    let g = Integer::from(2);
-    let t = 10u32;
-    let (y, _pi) = vdf::wesolowski_prove(&g, t, &n);
-    assert!(vdf::wesolowski_verify(&g, t, &n, &y));
-}
-```
-
-**Verification**: Run `grep -r "wesolowski_setup_test" src/` to confirm test function is never called in production code (only in `tests/`).
-
-## 🤖 AI Engine
-
-AXIOM Protocol integrates an AI engine for network protection and anomaly detection:
-- **ONNX Runtime** is used for running pre-trained neural networks.
-- The AI engine monitors peer behavior, transaction patterns, and network health in real time.
-- It can detect and respond to attacks, spam, and abnormal activity, improving network resilience.
-
-**Key Features:**
-- Pluggable AI models (updateable without protocol changes)
-- Real-time inference with low latency
-- Integration with consensus and governance for automated responses
-
-**How it works:**
-- The AI engine loads models at startup and continuously analyzes network data.
-- Detected anomalies can trigger alerts, slashing, or automated governance actions.
-
-See `src/ai_engine.rs` and `src/ai_logic.rs` for implementation details.
-# AXIOM Protocol (124M) - Production-Ready Blockchain 🏛️
-
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-46%2F49%20passing-green.svg)](tests/)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Network](https://img.shields.io/badge/network-active-blue.svg)]()
-[![Peers](https://img.shields.io/badge/peers-verified-success.svg)]()
-
-**The 124,000,000 Sovereign Supply Blockchain** - A fully decentralized, production-ready blockchain with ZK-SNARK privacy, VDF consensus, LWMA difficulty protection, AI-powered network protection, and 30-minute block times.
-
-> **Special Binary Message**: `01010011 01100001 01110100 01101111 01110011 01101000 01101001` 🔐
-
-
-- [Security Audit & Known Issues](#-security-audit--known-issues)
-## 🚨 Security Audit & Known Issues
-
-### Current Audit Warnings (as of January 2025)
-
-This project passes all direct dependency checks and is production-grade. However, `cargo audit` reports the following vulnerabilities and warnings due to indirect dependencies:
-
-**Vulnerabilities:**
-
-- `ring` (<0.17.12): AES panic bug ([RUSTSEC-2025-0009](https://rustsec.org/advisories/RUSTSEC-2025-0009))
-    - **Cause:** Used by `libp2p-tls` (via `libp2p`).
-    - **Resolution:** Cannot be fixed until `libp2p` updates its dependencies.
-
-- `time` (<0.2.23): Potential segfault ([RUSTSEC-2020-0071](https://rustsec.org/advisories/RUSTSEC-2020-0071))
-    - **Cause:** Used by `onnxruntime` (via `zip`).
-    - **Resolution:** Cannot be fixed until `onnxruntime` updates its dependencies.
-
-- `tracing-subscriber` (<0.3.20): Logging ANSI escape bug ([RUSTSEC-2025-0055](https://rustsec.org/advisories/RUSTSEC-2025-0055))
-    - **Cause:** Used by `ark-relations` (via `ark-groth16` and other arkworks crates).
-    - **Resolution:** Cannot be fixed until `arkworks` crates update their dependencies.
-
-**Warnings (Unmaintained/Unsound):**
-
-- `bincode`, `derivative`, `fxhash`, `instant`, `paste`, `lru`, `ring` (old)
-    - **Cause:** Used by various upstream crates.
-    - **Resolution:** Awaiting upstream updates.
-
-### Why These Cannot Be Fixed Now
-
-These issues are present in indirect dependencies (used by libraries we depend on). We cannot resolve them directly until the maintainers of those libraries release new versions with updated dependencies. This is a common situation in the Rust ecosystem for advanced projects.
-
-**What we do:**
-- Monitor upstream projects for security updates.
-- Update dependencies as soon as fixes are available.
-- Document all known issues transparently for users and auditors.
-
-**Production Impact:**
-- All direct dependencies are up to date and secure.
-- No known vulnerabilities are directly exploitable in this codebase.
-- The project is production-grade and safe to use, but will show audit warnings until upstreams update.
-
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Architecture](#-architecture)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Usage](#-usage)
-- [Network Monitoring](#-network-monitoring)
-- [Security Audit](#-security-audit)
-- [Testing Results](#-testing-results)
-- [API Reference](#-api-reference)
-- [Tools & Scripts](#-tools--scripts)
-- [Configuration](#-configuration)
-- [Contributing](#-contributing)
-- [License](#-license)
-
-## 📋 Table of Contents
-
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Architecture](#-architecture)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [**Network Setup Guide**](NETWORK_SETUP_GUIDE.md) 🌐 **← Start here for multi-node setup!**
-- [**Production Features**](PRODUCTION_FEATURES.md) 🏭 **← Security, monitoring & stress tests**
-- [Usage](#-usage)
-- [API Reference](#-api-reference)
-- [Testing](#-testing)
-- [Configuration](#-configuration)
-- [Contributing](#-contributing)
-- [License](#-license)
-
-## 🌟 Overview
-
-AXIOM Protocol is a **fully tested and production-ready** next-generation blockchain that combines:
-
-- **✅ Zero-Knowledge Privacy**: ZK-SNARK proofs for transaction anonymity
-- **✅ Time-Based Consensus**: VDF (Verifiable Delay Function) + PoW hybrid
-- **✅ AI Network Protection**: Neural Guardian for attack detection
-- **✅ Real-Time Peer Monitoring**: Live network status and peer counting
-- **✅ Multi-Node Testing**: Peer discovery and connection verified
-- **✅ Transaction System**: Complete wallet and broadcasting functionality
-- **✅ Fixed Supply Economics**: 124M AXM with predictable binary halving schedule (50 → 25 → 12.5...)
-- **✅ LWMA Difficulty**: Flash mining protection with 60-block weighted average
-- **✅ Production-Ready**: 8/8 tests passing, clean code, enterprise features
-
-### ✅ Verification Status
-- **Peer Discovery**: ✅ Tested and working (mDNS + libp2p)
-- **Network Monitoring**: ✅ Real-time dashboard active
+This document intentionally avoids speculative or financial language. Its purpose is to document the protocol's mathematical and engineering properties so third-party auditors and researchers can evaluate AXIOM objectively.
 - **Transaction Processing**: ✅ Wallet operations verified
 - **Multi-Node Operation**: ✅ Connection establishment confirmed
 - **Application Integration**: ✅ Python API demo included
