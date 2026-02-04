@@ -57,24 +57,32 @@ This document intentionally avoids speculative or financial language. Its purpos
 - **Time as Consensus**: VDF ensures fair block production
 - **Network Transparency**: Real-time peer monitoring and health status
 
-## 🔄 Recent Upgrades (January 2025)
+## 🔄 Recent Upgrades (February 2025)
 
-### Dependency Updates
-- **libp2p**: Upgraded from 0.53 to 0.56 for improved networking and security
-- **ark-* crates**: Updated to 0.5.x for latest ZK-SNARK implementations
-- **AI/ML**: Migrated from TensorFlow to ONNX Runtime for attack detection (see ONNX_USAGE.md)
-- **Cargo Audit**: All vulnerabilities resolved, clean build
+### libp2p 0.54.1 Improvements
+- **Yamux Stream Multiplexing**: Fixed keep-alive configuration for stable long-lived connections
+- **Idle Connection Timeout**: 120-second timeout prevents premature peer disconnects
+- **RequestResponse Fallback**: Multi-version protocol support (v1.0.0 & v0.9.0) for cross-version compatibility
+- **Bootstrap Retry Logic**: Automatic reconnection to bootstrap peers with exponential backoff
+- **Cross-Network Peer Discovery**: `AXIOM_KNOWN_PEERS` environment variable for explicit peer configuration
 
-### Infrastructure Improvements
-- **Docker Support**: Added Dockerfile and docker-compose.yml for containerized deployment
-- **Mainnet Configuration**: Updated setup for production mainnet operation
-- **CLI Enhancements**: Added `--bootnodes` flag for initial peer connections
-- **Bootstrap Config**: `config/bootstrap.toml` with mainnet bootnode addresses
+### OpenClaw Integration (Production)
+- **Ceremony Master**: Multi-party computation (MPC) coordinator for ZK trusted setup
+- **Node Health Monitor**: Real-time surveillance of network peer activity and connection quality  
+- **Agent Internet**: Multi-platform deployment support (Moltbook, Eliza, Autonolas)
+- **Auto-Launch**: OpenClaw components start automatically with node in background
 
-### Security Enhancements
-- **Audit Documentation**: Full security audit results in `SECURITY.md`
-- **Vulnerability Tracking**: Active monitoring of dependencies
-- **Responsible Disclosure**: Established security reporting process
+### Multi-Node Synchronization
+- **Same-Machine Setup**: Run multiple nodes on one machine with automatic port allocation (6000-6010)
+- **mDNS Discovery**: Automatic peer detection on local network
+- **Block Synchronization**: Nodes converge to same height and state automatically
+- **Wallet Management**: Clear wallet.dat deletion process for fresh genesis start
+
+### Infrastructure & Security
+- **Docker Support**: Dockerfile and docker-compose.yml for containerized deployment
+- **Mainnet Configuration**: Production-ready bootstrap nodes and network settings
+- **Vulnerability Response**: Continuous security auditing with 0 critical issues
+- **Responsible Disclosure**: Established security reporting process in SECURITY.md
 
 ## ✨ Key Features
 
@@ -99,11 +107,11 @@ This document intentionally avoids speculative or financial language. Its purpos
 
 ### 💰 Economics
 - **Fixed Supply**: 124,000,000 AXM (124,000,000,000,000,000 smallest units)
-- **Block Reward**: 50 AXM (halves every 1,240,000 blocks)
-- **Block Time**: 1800 seconds (30 minutes)
-- **Initial Reward**: 50 AXM per block
+- **Block Reward**: 50 AXM (halves every 2,100,000 blocks)
+- **Block Time**: 3600 seconds (1 hour) via VDF consensus
+- **No Pre-mine**: 100% of supply earned through mining (no development wallet)
 - **Halving Schedule**: Every 2,100,000 blocks (~4 years)
-- **Deflationary Design**: Supply decreases over time
+- **Deflationary Design**: Supply decreases over time as halving reduces rewards
 
 ### 🔗 Network & Storage
 - **P2P Networking**: libp2p with gossipsub protocol
@@ -588,7 +596,7 @@ Chain → Add block → Save to storage → Update UTXO state
 - **Block Time**: 3600 seconds (1 hour) enforced by VDF
 - **Difficulty**: Auto-adjusts if mining fails (min: 10)
 - **Reward**: 50 AXM per block (halves every 2.1M blocks)
-- **Genesis**: 1,000,000 AXM pre-mine for development
+- **Total Supply**: 124,000,000 AXM (fixed, no pre-mine, all earned through mining)
 - **Validation**: Parent hash, VDF proof, PoW difficulty, ZK proof
 
 #### 🤖 AI Guardian (Neural Network)
@@ -671,7 +679,34 @@ docker-compose up -d
 docker-compose logs -f  # Watch them sync in real-time
 ```
 
-**3. Join Public Network**
+**3. Multi-Node on Same Machine (Advanced)**
+```bash
+# Terminal 1: Start first node (uses port 6000)
+cd /workspaces/Axiom-Protocol && rm -f wallet.dat chain_state.dat  # Fresh start
+./target/release/axiom
+
+# Copy PeerId from output: 12D3KooW...
+
+# Terminal 2: Start second node (uses port 6001)
+cd /path/to/axiom-2 && rm -f wallet.dat chain_state.dat
+export AXIOM_KNOWN_PEERS="/ip4/127.0.0.1/tcp/6000"
+./target/release/axiom
+
+# Terminal 3: Start third node (uses port 6002)
+cd /path/to/axiom-3 && rm -f wallet.dat chain_state.dat
+export AXIOM_KNOWN_PEERS="/ip4/127.0.0.1/tcp/6000"
+./target/release/axiom
+
+# All three nodes will discover each other and sync to same height
+```
+
+**Key Notes**:
+- **Delete wallet.dat first** so all nodes start from genesis block together
+- **mDNS discovery** works automatically on localhost
+- **Heights converge** within 2-3 minutes as blocks propagate
+- **Monitor logs** for "Peer connected" and "Block accepted" messages
+
+**4. Join Public Network**
 ```bash
 # Get bootnode address from config/bootstrap.toml
 ./target/release/axiom --bootnodes /ip4/34.145.123.45/tcp/6000/p2p/12D3KooWAbc...
